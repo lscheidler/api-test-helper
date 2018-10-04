@@ -16,7 +16,7 @@ require 'singleton'
 
 require 'output_helper'
 
-module ApiHelper
+module ApiTestHelper
   class Report
     include Singleton
 
@@ -24,11 +24,11 @@ module ApiHelper
       #OutputHelper::Columns::config(
       #  ascii: true
       #)
-      @data = OutputHelper::Columns.new ['project', 'group', 'job', 'runtime', 'failed', 'warnings']
+      @data = OutputHelper::Columns.new ['project', 'group', 'job', 'runtime', 'passed', 'failed', 'warnings']
     end
 
-    def add project:, group:, job:, runtime:, failed:, warnings:
-      @data << ({project: project, group: group, job: job, runtime: runtime, failed: failed, warnings: warnings})
+    def add project:, group:, job:, runtime:, passed:, failed:, warnings:
+      @data << ({project: project, group: group, job: job, runtime: runtime, passed: passed, failed: failed, warnings: warnings})
     end
 
     def to_s

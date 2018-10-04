@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-module ApiHelper
+module ApiTestHelper
   # Wrapper class for credential files
   class Authorization
     def initialize cwd, project: nil

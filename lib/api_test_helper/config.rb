@@ -15,7 +15,7 @@
 require 'ostruct'
 require 'singleton'
 
-module ApiHelper
+module ApiTestHelper
   class Config < OpenStruct
     include Singleton
   end

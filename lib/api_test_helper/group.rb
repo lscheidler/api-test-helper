@@ -14,10 +14,10 @@
 
 require 'yaml'
 
-require "api_helper/job"
-require "api_helper/validate"
+require "api_test_helper/job"
+require "api_test_helper/validate"
 
-module ApiHelper
+module ApiTestHelper
   class Group
     include Validate
 

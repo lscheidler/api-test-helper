@@ -14,11 +14,11 @@
 
 require 'yaml'
 
-require "api_helper/authorization"
-require "api_helper/group"
-require "api_helper/validate"
+require "api_test_helper/authorization"
+require "api_test_helper/group"
+require "api_test_helper/validate"
 
-module ApiHelper
+module ApiTestHelper
   class Project
     include Validate
 

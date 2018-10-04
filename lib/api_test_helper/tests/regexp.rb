@@ -14,12 +14,14 @@
 
 require "output_helper"
 
-require "api_helper/validate"
+require "api_test_helper/validate"
 
-module ApiHelper
+module ApiTestHelper
   module Tests
     class Regexp
       include Validate
+
+      attr_reader :name
 
       def initialize conf
         @name   = conf['Name']
@@ -31,7 +33,6 @@ module ApiHelper
 
       def test response
         if response[@key] !~ /#{@value}/
-          puts "#{@name} failed".subsection color: :red
           @failed = true
         end
         success?

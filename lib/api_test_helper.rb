@@ -16,12 +16,12 @@ require 'optparse'
 
 require 'output_helper'
 
-require "api_helper/config"
-require "api_helper/project"
-require "api_helper/report"
-require "api_helper/version"
+require "api_test_helper/config"
+require "api_test_helper/project"
+require "api_test_helper/report"
+require "api_test_helper/version"
 
-module ApiHelper
+module ApiTestHelper
   class CLI
     def initialize
       set_defaults
@@ -234,4 +234,4 @@ module ApiHelper
   end
 end
 
-ApiHelper::CLI.new
+ApiTestHelper::CLI.new

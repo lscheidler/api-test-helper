@@ -19,11 +19,11 @@ require 'net/http'
 
 require "output_helper"
 
-require "api_helper/config"
-require "api_helper/report"
-require "api_helper/tests"
+require "api_test_helper/config"
+require "api_test_helper/report"
+require "api_test_helper/tests"
 
-module ApiHelper
+module ApiTestHelper
   # represents a Job
   class Job
     include OutputHelper
@@ -52,7 +52,7 @@ module ApiHelper
       @vars               = get_setting cfg, 'Vars', required: false, default: {}
 
       @tests              = get_setting cfg, 'Tests', required: false, default: []
-      @tests.map!{|test| klass = Kernel::const_get "ApiHelper::Tests::#{test["Type"]}"; klass.new test}
+      @tests.map!{|test| klass = Kernel::const_get "ApiTestHelper::Tests::#{test["Type"]}"; klass.new test}
 
       @ignore_body        = get_setting cfg, 'Ignore_Body'        , required: false, default: false
       @print_body         = get_setting cfg, 'Print_Body'         , required: false, default: true
@@ -77,7 +77,10 @@ module ApiHelper
 
       @tests.each do |test|
         test.test @request_response
-        @failed_tests += 1 if not test.success?
+        if not test.success?
+          @failed_tests += 1
+          error test.name + ' failed'
+        end
       end
 
       if @config.report
@@ -87,6 +90,7 @@ module ApiHelper
           group: @group.name,
           job: @name,
           runtime: @runtime.runtime,
+          passed: ((@tests.length - @failed_tests) == 0) ? 0 : (@tests.length - @failed_tests).to_s.green,
           failed: (@failed_tests == 0) ? @failed_tests : @failed_tests.to_s.red,
           warnings: (@warnings == 0) ? @warnings : @warnings.to_s.yellow
         )
@@ -268,7 +272,7 @@ module ApiHelper
     def var name
       if @vars.has_key? name
         if @vars[name].nil?
-          error 'Content of variable ' + name + ' is nil, which could lead to errors in templates.'
+          warning 'Content of variable ' + name + ' is nil, which could lead to errors in templates.'
           @warnings += 1
         end
         @vars[name]
@@ -284,11 +288,15 @@ module ApiHelper
     end
 
     def message msg
-      printf "\e[0;33;49m▆\e[0m #{msg}\n"
+      puts msg.subsection prefix: '▆', color: :yellow
     end
 
     def error msg
-      warn "\e[0;31;49m▆\e[0m #{msg}"
+      warn msg.subsection prefix: '▆', color: :red
+    end
+
+    def warning msg
+      warn msg.subsection prefix: '▆', color: :yellow
     end
   end
 end

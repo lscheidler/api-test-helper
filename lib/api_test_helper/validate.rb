@@ -14,7 +14,7 @@
 
 require "output_helper"
 
-module ApiHelper
+module ApiTestHelper
   module Validate
     def isset var, msg
       if var.nil? or var.empty?
