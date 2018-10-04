@@ -23,7 +23,7 @@ module ApiTestHelper
     def load_configuration cwd, project: nil
       global = false
       local_filename = project + '/credentials.yml'
-      global_filename = Dir.home + '/.api-helper-credentials.yml'
+      global_filename = Dir.home + '/.api-test-helper-credentials.yml'
 
       if File.exist?(local_filename)
         @filename = local_filename

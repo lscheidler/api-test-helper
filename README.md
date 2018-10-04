@@ -1,4 +1,4 @@
-# api-helper
+# api-test-helper
 
 Helper to test REST-Apis
 
@@ -7,7 +7,7 @@ Helper to test REST-Apis
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'api-helper', '~> 0.0.1', git: 'https://github.com/lscheidler/api-helper', branch: 'master'
+gem 'api-test-helper', '~> 0.0.1', git: 'https://github.com/lscheidler/api-test-helper', branch: 'master'
 ```
 
 And then execute:
@@ -17,12 +17,12 @@ And then execute:
 ## Usage
 
 ```
-bin/api-helper -h
+bin/api-test-helper -h
 ```
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/lscheidler/api-helper.
+Bug reports and pull requests are welcome on GitHub at https://github.com/lscheidler/api-test-helper.
 
 
 ## License
