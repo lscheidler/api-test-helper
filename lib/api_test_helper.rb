@@ -13,6 +13,7 @@
 # limitations under the License.
 
 require 'optparse'
+require 'bundler/setup'
 
 require 'output_helper'
 
