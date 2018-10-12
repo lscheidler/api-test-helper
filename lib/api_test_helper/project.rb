@@ -24,10 +24,11 @@ module ApiTestHelper
 
     attr_accessor :domain, :groups, :name, :authorization, :dir
 
-    def initialize filename:
+    def initialize filename:, config:
       conf = YAML::load_file(filename)
 
       @filename = filename
+      @config   = config
       @domain   = conf['Domain']
       @name     = conf['Name']
       @dir      = File.dirname(filename)
@@ -39,12 +40,12 @@ module ApiTestHelper
       end
 
       Dir.glob(File.dirname(filename) + '/**/group.yml') do |group_filename|
-        group = Group.new domain: @domain, filename: group_filename, project: self
+        group = Group.new config: @config, domain: @domain, filename: group_filename, project: self
         @groups[group.name] = group
       end
 
       if conf['Jobs']
-        default_group = Group.new(domain: @domain, filename: nil, project: self)
+        default_group = Group.new(config: @config, domain: @domain, filename: nil, project: self)
         default_group.name = 'default'
         default_group.load_jobs conf['Jobs']
         if @groups['default'].nil?

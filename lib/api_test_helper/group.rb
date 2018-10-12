@@ -23,7 +23,8 @@ module ApiTestHelper
 
     attr_accessor :name, :jobs, :dir
 
-    def initialize project:, domain:, filename:
+    def initialize config:, project:, domain:, filename:
+      @config   = config
       @project  = project
       @domain   = domain
       @jobs     = {}
@@ -41,7 +42,7 @@ module ApiTestHelper
 
     def load_jobs jobs
       jobs and jobs.each do |job_name, job_conf|
-        job = Job.new job_name, job_conf, project: @project, group: self
+        job = Job.new job_name, job_conf, config: @config, project: @project, group: self
         @jobs[job_name] = job
       end
     end

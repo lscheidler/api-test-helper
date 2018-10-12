@@ -13,5 +13,5 @@
 # limitations under the License.
 
 module ApiTestHelper
-  VERSION = "0.1.0"
+  VERSION = "0.1.1"
 end

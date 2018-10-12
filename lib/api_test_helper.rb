@@ -16,8 +16,8 @@ require 'optparse'
 require 'bundler/setup'
 
 require 'output_helper'
+require 'overlay_config'
 
-require "api_test_helper/config"
 require "api_test_helper/project"
 require "api_test_helper/report"
 require "api_test_helper/version"
@@ -46,43 +46,45 @@ module ApiTestHelper
       # set STDOUT to synchronize
       STDOUT.sync = true
 
-      @config = Config.instance
-
-      @initial_working_directory = Dir.pwd
-      @config.output_directory = '/tmp/'
+      @script_name = File.basename($0)
+      @config = OverlayConfig::Config.new config_scope: 'api-test-helper', defaults: {
+        working_directory: Dir.pwd,
+        output_directory: '/tmp/'
+      }
 
       @projects = {}
       @selected_jobs = []
-
-      @config.working_directory = './'
     end
 
     # load and validate local configfile
     def load_local_configfile
-
       Dir.glob('**/project.yml') do |filename|
-        project   =  Project.new(filename: filename)
+        project   =  Project.new(config: @config, filename: filename)
         @projects[project.name] = project if project.valid?
       end
     end
 
     # parse command line arguments
     def parse_arguments
+      @cmd_line_arguments = {}
+
       @options = OptionParser.new do |opt|
         opt.on('-C', '--change-dir DIR', 'Change working directory to DIR') do |directory|
-          @config.working_directory = directory
-          @config.working_directory += '/' if not @config.working_directory.end_with? '/'
-
-          Dir.chdir @config.working_directory
+          @cmd_line_arguments[:working_directory] = directory
+          @cmd_line_arguments[:working_directory] += '/' if not @cmd_line_arguments[:working_directory].end_with? '/'
         end
 
         opt.on('-d', '--debug', 'Debug mode') do
-          @debug = true
+          @cmd_line_arguments[:debug] = true
         end
 
         opt.on('-G', '--generate-json', 'Generate json files, which are commited to api') do
-          @generate_json_file = true
+          @cmd_line_arguments[:generate_json_file] = true
           @action ||= :generate
+        end
+
+        opt.on('--generate-report', 'Generate report csv in output directory') do
+          @cmd_line_arguments[:generate_json_file] = true
         end
 
         opt.on('-g', '--group NAME', 'set group') do |group|
@@ -102,19 +104,23 @@ module ApiTestHelper
         end
 
         opt.on('-o', '--output-directory DIR', 'generate json file into DIR directory', 'default: ' + @config.output_directory) do |directory|
-          @config.output_directory = directory
-          @config.output_directory += '/' unless @config.output_directory.end_with? '/'
-          unless File.directory?(@config.output_directory)
-            Dir.mkdir @config.output_directory
+          @cmd_line_arguments[:output_directory] = directory
+          @cmd_line_arguments[:output_directory] += '/' unless @cmd_line_arguments[:output_directory].end_with? '/'
+          unless File.directory?(@cmd_line_arguments[:output_directory])
+            Dir.mkdir @cmd_line_arguments[:output_directory]
           end
+        end
+
+        opt.on('-q', '--quiet', 'be quiet') do
+          @cmd_line_arguments[:quiet] = true
         end
 
         opt.on('-r', '--run', 'Run all configured jobs or all jobs passed with -j') do
           @action = :run
         end
 
-        opt.on('--report', 'show report') do
-          @config.report = true
+        opt.on('-R', '--report', 'show report') do
+          @cmd_line_arguments[:report] = true
         end
 
         opt.separator "
@@ -124,13 +130,16 @@ module ApiTestHelper
     #{File.basename $0} -l
 
     # List all available jobs in a specific directory
-    #{File.basename $0} -C api-helper/LISU -l
+    #{File.basename $0} -C api-helper -p LISU -l
 
     # Run all configured jobs
     #{File.basename $0} -r
 
+    # Run all configured jobs and show a report
+    #{File.basename $0} -r --report
+
     # Run all configured jobs in a specific directory
-    #{File.basename $0} -C api-helper/LISU -r
+    #{File.basename $0} -C api-helper -p LISU -r
 
     # Run Job_A and Job_B, which must configured in ./config.yml
     #{File.basename $0} -r -j Job_A -j Job_B
@@ -186,6 +195,9 @@ module ApiTestHelper
   "
       end
       @options.parse!
+
+      @config.insert 0, '<command_line>', @cmd_line_arguments
+      Dir.chdir @config.working_directory
     end
 
     # generate json files in /tmp
@@ -213,7 +225,17 @@ module ApiTestHelper
       end
 
       if @config.report
-        puts Report.instance
+        report = Report.instance
+        puts report
+
+        if @config.generate_report
+          filename = @config.output_directory + @script_name + '.report.'+ Time.now.strftime('%Y%m%dT%H%M%S') +'.csv'
+          File.open(filename, 'w') do |io|
+            io.print report.to_csv
+          end
+        end
+
+        #puts 'Generated report.csv in ' + filename
       end
     end
 

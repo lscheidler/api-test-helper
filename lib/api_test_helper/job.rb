@@ -19,7 +19,6 @@ require 'net/http'
 
 require "output_helper"
 
-require "api_test_helper/config"
 require "api_test_helper/report"
 require "api_test_helper/tests"
 
@@ -31,8 +30,8 @@ module ApiTestHelper
     attr_reader :name, :uri, :request_response, :runtime
     attr_reader :print_body, :ignore_body, :save_body, :download_directory
 
-    def initialize name, cfg, project:, group:
-      @config = Config.instance
+    def initialize name, cfg, config:, project:, group:
+      @config = config
 
       @project  = project
       @group    = group
@@ -65,9 +64,11 @@ module ApiTestHelper
     end
 
     def run
-      puts
-      print_section 'Running ' + @name
-      generate_json_file if @generate_json_file
+      unless @config.quiet
+        puts
+        print_section 'Running ' + @name
+      end
+      generate_json_file if @config.generate_json_file
 
       wait
 
@@ -90,13 +91,13 @@ module ApiTestHelper
           group: @group.name,
           job: @name,
           runtime: @runtime.runtime,
-          passed: ((@tests.length - @failed_tests) == 0) ? 0 : (@tests.length - @failed_tests).to_s.green,
-          failed: (@failed_tests == 0) ? @failed_tests : @failed_tests.to_s.red,
-          warnings: (@warnings == 0) ? @warnings : @warnings.to_s.yellow
+          passed: @tests.length - @failed_tests,
+          failed: @failed_tests,
+          warnings: @warnings
         )
       end
 
-      print_section(@runtime.runtime)
+      print_section(@runtime.runtime) unless @config.quiet
     end
 
     def print_section msg
@@ -123,7 +124,7 @@ module ApiTestHelper
     # sleep for *@wait* seconds, if Wait is defined in configuration
     def wait
       if not @wait.nil?
-        puts 'Waiting for ' + @wait.to_s + ' before sending request.'
+        message 'Waiting for ' + @wait.to_s + ' before sending request.'
         sleep @wait
       end
     end
@@ -186,7 +187,8 @@ module ApiTestHelper
     end
 
     def send_request
-      puts get_request.method + ' ' + @uri.to_s
+      get_request
+      message get_request.method + ' ' + @uri.to_s, without_prefix: true
       
       http = Net::HTTP.new(@uri.hostname, @uri.port) 
       http.use_ssl = @uri.scheme == 'https'
@@ -196,10 +198,12 @@ module ApiTestHelper
         http.request(get_request)
       end
 
-      puts 'HTTP/' + response.http_version + ' ' + response.code
-      response.header.each_header {|key,value| puts "#{key}: #{value}" }
-      puts
-      puts response.body if @print_body and response['content-type'].include? 'application/json'
+      unless @config.quiet
+        puts 'HTTP/' + response.http_version + ' ' + response.code
+        response.header.each_header {|key,value| puts "#{key}: #{value}" }
+        puts
+        puts response.body if @print_body and response['content-type'].include? 'application/json'
+      end
 
       # assuming, api returns a json string
       begin
@@ -225,8 +229,10 @@ module ApiTestHelper
           io.print response.body
         end
 
-        puts 'Saved body to ' + filename
-        puts
+        unless @config.quiet
+          puts 'Saved body to ' + filename
+          puts
+        end
       end
     end
 
@@ -239,9 +245,9 @@ module ApiTestHelper
 
     # return value from *job_name* for *var*
     def response job_name, var
-      if not @group[job_name].request_response.nil? and not @group[job_name].request_response[var].nil?
+      if not @group[job_name].nil? and not @group[job_name].request_response.nil? and not @group[job_name].request_response[var].nil?
         @group[job_name].request_response[var]
-      elsif not @group[job_name].request_response.nil?
+      elsif not @group[job_name].nil? and not @group[job_name].request_response.nil?
         error '[' + job_name + '] Variable ' + var + ' not found in job response'
         ''
       else
@@ -287,15 +293,25 @@ module ApiTestHelper
       time(-1, format: :iso8601)
     end
 
-    def message msg
-      puts msg.subsection prefix: '▆', color: :yellow
+    def message msg, without_prefix: false
+      return if @config.quiet
+
+      if without_prefix
+        puts msg
+      else
+        puts msg.subsection prefix: '▆', color: :green
+      end
     end
 
     def error msg
+      return if @config.quiet
+
       warn msg.subsection prefix: '▆', color: :red
     end
 
     def warning msg
+      return if @config.quiet
+
       warn msg.subsection prefix: '▆', color: :yellow
     end
   end

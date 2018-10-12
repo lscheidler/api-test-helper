@@ -25,6 +25,10 @@ module ApiTestHelper
       #  ascii: true
       #)
       @data = OutputHelper::Columns.new ['project', 'group', 'job', 'runtime', 'passed', 'failed', 'warnings']
+
+      @data.formatter :passed, Proc.new{|row, value| (value == 0) ? 0 : value.to_s.green}
+      @data.formatter :failed, Proc.new{|row, value| (value == 0) ? value : value.to_s.red}
+      @data.formatter :warnings, Proc.new{|row, value| (value == 0) ? value : value.to_s.yellow}
     end
 
     def add project:, group:, job:, runtime:, passed:, failed:, warnings:
@@ -36,6 +40,15 @@ module ApiTestHelper
       result += "Report".section
       result += @data.to_s
       result
+    end
+
+    def to_csv
+      delimiter = ','
+      result = [['project', 'group', 'job', 'runtime', 'passed', 'failed', 'warnings'].join(delimiter)]
+      @data.each do |job|
+        result << [job[:project], job[:group], job[:job], job[:runtime], job[:passed], job[:failed], job[:warnings]].join(delimiter)
+      end
+      result.join("\n")
     end
   end
 end
