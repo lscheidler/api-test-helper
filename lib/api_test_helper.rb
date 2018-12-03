@@ -29,7 +29,7 @@ module ApiTestHelper
       parse_arguments
       load_local_configfile
 
-      case @action
+      case @config.action
       when :generate
         generate_json_files
       when :list
@@ -49,7 +49,7 @@ module ApiTestHelper
       @script_name = File.basename($0)
       @config = OverlayConfig::Config.new config_scope: 'api-test-helper', defaults: {
         working_directory: Dir.pwd,
-        output_directory: '/tmp/'
+        output_directory: '/tmp'
       }
 
       @projects = {}
@@ -71,7 +71,6 @@ module ApiTestHelper
       @options = OptionParser.new do |opt|
         opt.on('-C', '--change-dir DIR', 'Change working directory to DIR') do |directory|
           @cmd_line_arguments[:working_directory] = directory
-          @cmd_line_arguments[:working_directory] += '/' if not @cmd_line_arguments[:working_directory].end_with? '/'
         end
 
         opt.on('-d', '--debug', 'Debug mode') do
@@ -80,15 +79,15 @@ module ApiTestHelper
 
         opt.on('-G', '--generate-json', 'Generate json files, which are commited to api') do
           @cmd_line_arguments[:generate_json_file] = true
-          @action ||= :generate
+          @cmd_line_arguments[:action] ||= :generate
         end
 
         opt.on('--generate-report', 'Generate report csv in output directory') do
-          @cmd_line_arguments[:generate_json_file] = true
+          @cmd_line_arguments[:generate_report] = true
         end
 
         opt.on('-g', '--group NAME', 'set group') do |group|
-          @group = group
+          @cmd_line_arguments[:group] = group
         end
 
         opt.on('-j', '--job JOB', Array, 'Limit action to JOB') do |jobs|
@@ -96,19 +95,15 @@ module ApiTestHelper
         end
 
         opt.on('-l', '--list', 'List available jobs') do
-          @action = :list
+          @cmd_line_arguments[:action] = :list
         end
 
         opt.on('-p', '--project NAME', 'set project') do |project|
-          @project = project
+          @cmd_line_arguments[:project] = project
         end
 
         opt.on('-o', '--output-directory DIR', 'generate json file into DIR directory', 'default: ' + @config.output_directory) do |directory|
           @cmd_line_arguments[:output_directory] = directory
-          @cmd_line_arguments[:output_directory] += '/' unless @cmd_line_arguments[:output_directory].end_with? '/'
-          unless File.directory?(@cmd_line_arguments[:output_directory])
-            Dir.mkdir @cmd_line_arguments[:output_directory]
-          end
         end
 
         opt.on('-q', '--quiet', 'be quiet') do
@@ -116,11 +111,15 @@ module ApiTestHelper
         end
 
         opt.on('-r', '--run', 'Run all configured jobs or all jobs passed with -j') do
-          @action = :run
+          @cmd_line_arguments[:action] = :run
         end
 
         opt.on('-R', '--report', 'show report') do
           @cmd_line_arguments[:report] = true
+        end
+
+        opt.on('-s', '--save-response', 'save respone in output directory') do
+          @cmd_line_arguments[:save_response] = true
         end
 
         opt.separator "
@@ -157,7 +156,9 @@ module ApiTestHelper
 
     Variables and Responses:
       response('<job_name>', '<name>')        - return value from the response of a job (see examples)
-      var('<name>')                           - return variable defined in Job in Vars section
+      var('<name>',                           - return variable defined in Job in Vars section.
+                    default: nil,               when default is set (not nil) and variable is undefined, return default
+                    ignore_error: false)        when variable is undefined, do not throw an error
 
     Date and Time:
       now()                                   - returns today (now) in seconds
@@ -197,6 +198,11 @@ module ApiTestHelper
       @options.parse!
 
       @config.insert 0, '<command_line>', @cmd_line_arguments
+
+      unless File.directory?(@config.output_directory)
+        Dir.mkdir @config.output_directory
+      end
+
       Dir.chdir @config.working_directory
     end
 
@@ -229,7 +235,7 @@ module ApiTestHelper
         puts report
 
         if @config.generate_report
-          filename = @config.output_directory + @script_name + '.report.'+ Time.now.strftime('%Y%m%dT%H%M%S') +'.csv'
+          filename = File.join(@config.output_directory, @script_name + '.report.'+ Time.now.strftime('%Y%m%dT%H%M%S') +'.csv')
           File.open(filename, 'w') do |io|
             io.print report.to_csv
           end
@@ -241,10 +247,10 @@ module ApiTestHelper
 
     def filter
       @projects.each do |pname, project|
-        next if @project and @project != pname
+        next if @config.project and @config.project != pname
 
         project.groups.each do |gname, group|
-          next if @group and @group != gname
+          next if @config.group and @config.group != gname
 
           group.each do |job_name, job|
             next unless @selected_jobs.empty? or @selected_jobs.find{|x| job_name =~ /#{x}/}

@@ -64,6 +64,8 @@ module ApiTestHelper
     end
 
     def run
+      @request_output_io  = File.open(File.join(@output_directory, File.basename($0) + '.' + [ @project.name, @group.name, @name ].join('-') + '.request.txt'), 'w') if @config.save_response
+
       unless @config.quiet
         puts
         print_section 'Running ' + @name
@@ -168,11 +170,11 @@ module ApiTestHelper
 
       json_doc = get_json_doc check_json: false if json_doc.nil?
 
-      filename = @output_directory + File.basename($0) + '.' + @name + '.json'
+      filename = File.join(@output_directory, File.basename($0) + '.' + [@project.name, @group.name, @name].join('-') + '.json')
       if @output_directory.start_with? '/'
         message 'Generate json for ' + @name + ' in ' + filename
       else
-        message 'Generate json for ' + @name + ' in ' + @working_directory + filename
+        message 'Generate json for ' + @name + ' in ' + File.join(@working_directory, filename)
       end
       
       File.open(filename, 'w') do |io|
@@ -189,6 +191,7 @@ module ApiTestHelper
     def send_request
       get_request
       message get_request.method + ' ' + @uri.to_s, without_prefix: true
+      @request_output_io and @request_output_io.puts get_request.method + ' ' + @uri.to_s
       
       http = Net::HTTP.new(@uri.hostname, @uri.port) 
       http.use_ssl = @uri.scheme == 'https'
@@ -198,12 +201,13 @@ module ApiTestHelper
         http.request(get_request)
       end
 
-      unless @config.quiet
-        puts 'HTTP/' + response.http_version + ' ' + response.code
-        response.header.each_header {|key,value| puts "#{key}: #{value}" }
-        puts
-        puts response.body if @print_body and response['content-type'].include? 'application/json'
-      end
+      request_output = ['HTTP/' + response.http_version + ' ' + response.code]
+      response.header.each_header {|key,value| request_output << "#{key}: #{value}" }
+      request_output << ""
+      request_output << response.body if @print_body and response['content-type'].include? 'application/json'
+
+      puts request_output.join("\n") unless @config.quiet
+      @request_output_io and @request_output_io.puts request_output.join("\n")
 
       # assuming, api returns a json string
       begin
@@ -224,7 +228,7 @@ module ApiTestHelper
           extension = '.pdf'
         end
 
-        filename = @download_directory + '/' + @name + extension
+        filename = File.join(@download_directory, [@project.name, @group.name, @name].join('-') + extension)
         File.open(filename, 'w') do |io|
           io.print response.body
         end
@@ -275,14 +279,16 @@ module ApiTestHelper
     end
 
     # return variable specified in config file
-    def var name
+    def var name, default: nil, ignore_error: false
       if @vars.has_key? name
         if @vars[name].nil?
           warning 'Content of variable ' + name + ' is nil, which could lead to errors in templates.'
           @warnings += 1
         end
         @vars[name]
-      else
+      elsif not default.nil?
+        default
+      elsif not ignore_error
         error 'Variable ' + name + ' not found in job configuration for ' + @name
         exit 1
       end

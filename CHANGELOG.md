@@ -1,3 +1,9 @@
+0.1.2 (2018-12-03)
+==================
+
+- request writer
+- extended var() function with default and ignore\_error
+
 0.1.1 (2018-10-12)
 ==================
 
