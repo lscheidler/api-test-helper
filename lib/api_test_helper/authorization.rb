@@ -15,7 +15,8 @@
 module ApiTestHelper
   # Wrapper class for credential files
   class Authorization
-    def initialize cwd, project: nil
+    def initialize cwd, environment: nil, project: nil
+      @environment = environment
       load_configuration cwd, project: project
     end
 
@@ -58,7 +59,11 @@ module ApiTestHelper
 
     # return entry from authorization hash
     def [] name
-      @credentials[name]
+      if @environment and @credentials[@environment][name]
+        @credentials[@environment][name]
+      else
+        @credentials[name]
+      end
     end
   end
 end

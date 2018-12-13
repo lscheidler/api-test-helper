@@ -1,3 +1,8 @@
+0.1.3 (2018-12-13)
+==================
+
+- introduce environments for Domain and Authorization settings
+
 0.1.2 (2018-12-03)
 ==================
 

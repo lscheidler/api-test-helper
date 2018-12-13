@@ -77,6 +77,10 @@ module ApiTestHelper
           @cmd_line_arguments[:debug] = true
         end
 
+        opt.on('-d', '--environment NAME', 'set environment to NAME') do |environment|
+          @cmd_line_arguments[:environment] = environment
+        end
+
         opt.on('-G', '--generate-json', 'Generate json files, which are commited to api') do
           @cmd_line_arguments[:generate_json_file] = true
           @cmd_line_arguments[:action] ||= :generate

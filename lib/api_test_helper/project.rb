@@ -27,12 +27,19 @@ module ApiTestHelper
     def initialize filename:, config:
       conf = YAML::load_file(filename)
 
-      @filename = filename
-      @config   = config
-      @domain   = conf['Domain']
-      @name     = conf['Name']
-      @dir      = File.dirname(filename)
-      @groups   = {}
+      @filename     = filename
+      @config       = config
+      @environment  = config['environment']
+
+      if @environment and conf[@environment] and conf[@environment]['Domain']
+        @domain     = conf[@environment]['Domain']
+      else
+        @domain     = conf['Domain']
+      end
+
+      @name         = conf['Name']
+      @dir          = File.dirname(filename)
+      @groups       = {}
 
       begin
         @authorization = Authorization.new File.dirname(filename), project: @name if @name
