@@ -47,6 +47,7 @@ module ApiTestHelper
       @endpoint           = get_setting cfg, 'Endpoint'
       @authorization      = get_setting cfg, 'Authorization'
       @authorization      = get_setting @project.authorization, @authorization, msg: 'Authorization ' + @authorization + ' is missing in Authorization configuration' unless @authorization.nil?
+      @headers            = get_setting cfg, 'Headers', required: false, default: {}
       @wait               = get_setting cfg, 'Wait', required: false
       @vars               = get_setting cfg, 'Vars', required: false, default: {}
 
@@ -110,10 +111,17 @@ module ApiTestHelper
     def get_request
       @uri ||= URI(@project.domain+ERB.new(@endpoint).result(binding))
 
+      @headers.map{|k, v| v.replace(ERB.new(v).result(binding))}
+
+      @headers['authorization'] = @authorization unless @authorization.nil?
+
       @request ||= if @request_method == 'GET'
-                     request = Net::HTTP::Get.new(@uri, 'authorization' => @authorization)
+
+                     request = Net::HTTP::Get.new(@uri, @headers)
                    else
-                     request = Net::HTTP::Post.new(@uri, 'authorization' => @authorization, 'content_type' => 'application/json')
+                     @headers['content_type'] = 'application/json'
+
+                     request = Net::HTTP::Post.new(@uri, @headers)
                      request.body = get_json_doc
                      request.content_type = 'application/json'
 
