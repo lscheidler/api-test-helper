@@ -28,7 +28,7 @@ module ApiTestHelper
       conf = YAML::load_file(filename)
 
       @filename     = filename
-      @config       = config
+      @config       = config.clone
       @environment  = config['environment']
 
       if @environment and conf[@environment] and conf[@environment]['Domain']
@@ -41,9 +41,8 @@ module ApiTestHelper
       @dir          = File.dirname(filename)
       @groups       = {}
 
-      begin
-        @authorization = Authorization.new File.dirname(filename), project: @name if @name
-      rescue KeyError
+      if File.exist? (credentials_file = File.join(File.dirname(filename), 'credentials.yml'))
+        @config.insert(0, '<project>', YAML::load_file(credentials_file))
       end
 
       Dir.glob(File.dirname(filename) + '/**/group.yml') do |group_filename|

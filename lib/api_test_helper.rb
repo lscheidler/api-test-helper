@@ -77,7 +77,7 @@ module ApiTestHelper
           @cmd_line_arguments[:debug] = true
         end
 
-        opt.on('-d', '--environment NAME', 'set environment to NAME') do |environment|
+        opt.on('-e', '--environment NAME', 'set environment to NAME') do |environment|
           @cmd_line_arguments[:environment] = environment
         end
 
@@ -94,7 +94,7 @@ module ApiTestHelper
           @cmd_line_arguments[:group] = group
         end
 
-        opt.on('-j', '--job JOB', Array, 'Limit action to JOB') do |jobs|
+        opt.on('-j', '--job JOB[,JOB,...]', Array, 'Limit action to JOB, which is a regexpression') do |jobs|
           @selected_jobs += jobs
         end
 
@@ -144,8 +144,14 @@ module ApiTestHelper
     # Run all configured jobs in a specific directory
     #{File.basename $0} -C api-helper -p LISU -r
 
-    # Run Job_A and Job_B, which must configured in ./config.yml
+    # Run Job_A and Job_B, which must configured in project.yml or group.yml
     #{File.basename $0} -r -j Job_A -j Job_B
+
+    # Run all Jobs, which beginn with JOB
+    #{File.basename $0} -r -j JOB.*
+
+    # Run all Jobs, which contains with JOB
+    #{File.basename $0} -r -j .*JOB.*
 
     # Generate json files, which are going to be requested, for all configured jobs
     #{File.basename $0} -G
@@ -197,6 +203,12 @@ module ApiTestHelper
 
       # return timestamp of tomorrow in iso8601
       time(1, format: :iso8601)
+
+      # return credential
+      credential('PROJECT_NAME_username')
+
+      # return basic auth header value
+      basicauth('PROJECT_NAME_username', 'PROJECT_NAME_password')
   "
       end
       @options.parse!
@@ -257,7 +269,7 @@ module ApiTestHelper
           next if @config.group and @config.group != gname
 
           group.each do |job_name, job|
-            next unless @selected_jobs.empty? or @selected_jobs.find{|x| job_name =~ /#{x}/}
+            next unless @selected_jobs.empty? or @selected_jobs.find{|x| job_name =~ /^#{x}$/}
 
             yield project, group, job
           end
@@ -266,5 +278,3 @@ module ApiTestHelper
     end
   end
 end
-
-ApiTestHelper::CLI.new

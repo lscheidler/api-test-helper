@@ -1,3 +1,11 @@
+0.1.4 (2019-07-03)
+==================
+
+- added credential and basicauth function
+- changed regex for job selection
+- ERB evaluation for authorization, vars
+- colorize output
+
 0.1.3 (2018-12-13)
 ==================
 

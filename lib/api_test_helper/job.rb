@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+require 'base64'
 require 'benchmark'
 require 'erb'
 require 'json'
@@ -42,11 +43,12 @@ module ApiTestHelper
       @failed_tests       = 0
       @warnings           = 0
 
-      @request_method     = get_setting cfg, 'Method', required: false
-      @template           = get_setting cfg, 'Template' if @request_method != 'GET'
+      @request_method     = get_setting cfg, 'Method', required: false, default: 'Post'
+      if @request_method != 'GET'
+        @template         = get_setting cfg, 'Template', required: false
+      end
       @endpoint           = get_setting cfg, 'Endpoint'
-      @authorization      = get_setting cfg, 'Authorization'
-      @authorization      = get_setting @project.authorization, @authorization, msg: 'Authorization ' + @authorization + ' is missing in Authorization configuration' unless @authorization.nil?
+      @authorization      = get_setting cfg, 'Authorization', required: false
       @headers            = get_setting cfg, 'Headers', required: false, default: {}
       @wait               = get_setting cfg, 'Wait', required: false
       @vars               = get_setting cfg, 'Vars', required: false, default: {}
@@ -80,7 +82,13 @@ module ApiTestHelper
       end
 
       @tests.each do |test|
-        test.test @request_response
+        if @request_response.nil?
+          error '  WARNING: No json response available to test against'
+          @failed_tests += 1
+          next
+        end
+
+        test.test @request_response, job_binding: binding
         if not test.success?
           @failed_tests += 1
           error test.name + ' failed'
@@ -113,7 +121,7 @@ module ApiTestHelper
 
       @headers.map{|k, v| v.replace(ERB.new(v).result(binding))}
 
-      @headers['authorization'] = @authorization unless @authorization.nil?
+      @headers['authorization'] = ERB.new(@authorization).result(binding) unless @authorization.nil?
 
       @request ||= if @request_method == 'GET'
 
@@ -121,11 +129,11 @@ module ApiTestHelper
                    else
                      @headers['content_type'] = 'application/json'
 
-                     request = Net::HTTP::Post.new(@uri, @headers)
-                     request.body = get_json_doc
+                     request = Kernel.const_get('Net::HTTP::' + @request_method.capitalize).new(@uri, @headers)
+                     request.body = get_json_doc if @template
                      request.content_type = 'application/json'
 
-                     exit 1 if request.body.nil?
+                     exit 1 if request.body.nil? and not @template.nil?
 
                      request
                    end
@@ -153,9 +161,15 @@ module ApiTestHelper
     # run through templating and return string of result
     def get_json_doc check_json: true
       begin
-        json_doc = ERB.new(File.read(get_template)).result(binding)
-        JSON::parse(json_doc) if check_json
-        json_doc
+        template = get_template
+        if template
+          json_doc = ERB.new(File.read(template)).result(binding)
+          JSON::parse(json_doc) if check_json
+          json_doc
+        else
+          error 'No template ' + @template + ' found.'
+          exit 1
+        end
       rescue JSON::ParserError => exception
         error '  WARNING: Parsing json failed with: ' + exception.class.to_s + ' - ' + exception.message
         generate_json_file json_doc: json_doc, suppress_warning: true
@@ -203,23 +217,23 @@ module ApiTestHelper
       
       http = Net::HTTP.new(@uri.hostname, @uri.port) 
       http.use_ssl = @uri.scheme == 'https'
-      @debug and http.set_debug_output $stderr
+      @config.debug and http.set_debug_output $stderr
 
       response = http.start do
         http.request(get_request)
       end
 
-      request_output = ['HTTP/' + response.http_version + ' ' + response.code]
+      request_output = ['HTTP/' + response.http_version + ' ' + response_color(response.code)]
       response.header.each_header {|key,value| request_output << "#{key}: #{value}" }
       request_output << ""
-      request_output << response.body if @print_body and response['content-type'].include? 'application/json'
+      request_output << response.body if @print_body and response['content-type'] and response['content-type'].include? 'application/json'
 
       puts request_output.join("\n") unless @config.quiet
       @request_output_io and @request_output_io.puts request_output.join("\n")
 
       # assuming, api returns a json string
       begin
-        @request_response = JSON::parse(response.body) if not @ignore_body and response['content-type'].include? 'application/json'
+        @request_response = JSON::parse(response.body) if not @ignore_body and response['content-type'] and response['content-type'].include? 'application/json'
       rescue JSON::ParserError => exception
         error '  WARNING: Parsing body as json failed with: ' + exception.class.to_s + ' - ' + exception.message
       end
@@ -248,7 +262,38 @@ module ApiTestHelper
       end
     end
 
+    def response_color response_code
+      case response_code
+      when '200'
+        response_code.green
+      when /^(40(1|3)|5)/
+        response_code.red
+      else
+        response_code.yellow
+      end
+    end
+
     ## template macros
+
+    #
+    def basicauth username_key, password_key
+      if @config.has_key? username_key and @config.has_key? password_key
+        'Basic ' + Base64.encode64(@config[username_key] + ':' + @config[password_key])
+      else
+        error 'Cannot create basic auth header, because either ' + username_key + ' or ' + password_key + ' is missing'
+        exit 1
+      end
+    end
+
+    #
+    def credential key
+      if @config.has_key? key
+        @config[key]
+      else
+        error 'Credential ' + key + ' not found'
+        exit 1
+      end
+    end
 
     # return now in seconds
     def now
@@ -261,10 +306,10 @@ module ApiTestHelper
         @group[job_name].request_response[var]
       elsif not @group[job_name].nil? and not @group[job_name].request_response.nil?
         error '[' + job_name + '] Variable ' + var + ' not found in job response'
-        ''
+        exit 1
       else
         error 'No job response found for ' + job_name
-        ''
+        exit 1
       end
     end
 
@@ -293,7 +338,11 @@ module ApiTestHelper
           warning 'Content of variable ' + name + ' is nil, which could lead to errors in templates.'
           @warnings += 1
         end
-        @vars[name]
+        if @vars[name].nil? or @vars[name].is_a? Numeric or @vars[name].is_a? TrueClass or @vars[name].is_a? FalseClass
+          @vars[name]
+        else
+          ERB.new(@vars[name]).result(binding)
+        end
       elsif not default.nil?
         default
       elsif not ignore_error

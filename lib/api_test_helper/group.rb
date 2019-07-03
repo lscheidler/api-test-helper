@@ -24,12 +24,16 @@ module ApiTestHelper
     attr_accessor :name, :jobs, :dir
 
     def initialize config:, project:, domain:, filename:
-      @config   = config
+      @config   = config.clone
       @project  = project
       @domain   = domain
       @jobs     = {}
 
       if filename
+        if File.exist? (credentials_file = File.join(File.dirname(filename), 'credentials.yml'))
+          @config.insert(0, '<group>', YAML::load_file(credentials_file))
+        end
+
         conf = YAML::load_file(filename)
 
         @filename = filename

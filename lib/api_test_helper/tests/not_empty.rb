@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-require 'erb'
 require "output_helper"
 
 require "api_test_helper/validate"
@@ -21,7 +20,7 @@ require_relative 'common'
 
 module ApiTestHelper
   module Tests
-    class Regexp < Common
+    class NotEmpty < Common
       include Validate
 
       attr_reader :name
@@ -29,18 +28,14 @@ module ApiTestHelper
       def initialize conf
         @name   = conf['Name']
         @key    = conf['Key']
-        @value  = conf['Value']
 
         @failed = false
       end
 
       def test response, job_binding: nil
         value = get_value response, @key
-        value = value.to_s if value.nil? or value.is_a? TrueClass or value.is_a? FalseClass or value.is_a? Numeric
 
-        if value !~ /#{ERB.new(@value).result(job_binding)}/
-          @failed = true
-        end
+        @failed = value.empty?
         success?
       end
 

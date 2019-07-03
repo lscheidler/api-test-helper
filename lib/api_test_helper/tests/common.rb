@@ -12,6 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-require "api_test_helper/tests/equal"
-require "api_test_helper/tests/not_empty"
-require "api_test_helper/tests/regexp"
+module ApiTestHelper
+  module Tests
+    class Common
+      def get_value data, key
+        if key.is_a? String
+          data[key]
+        elsif key.is_a? Array
+          if key.empty?
+            data
+          else
+            cur = key.shift
+            get_value data[cur], key
+          end
+        end
+      end
+    end
+  end
+end
