@@ -102,6 +102,7 @@ module ApiTestHelper
           group: @group.name,
           job: @name,
           runtime: @runtime.runtime,
+          status: response_color(@request_response_code),
           passed: @tests.length - @failed_tests,
           failed: @failed_tests,
           warnings: @warnings
@@ -223,7 +224,8 @@ module ApiTestHelper
         http.request(get_request)
       end
 
-      request_output = ['HTTP/' + response.http_version + ' ' + response_color(response.code)]
+      @request_response_code = response.code
+      request_output = ['HTTP/' + response.http_version + ' ' + response_color(@request_response_code)]
       response.header.each_header {|key,value| request_output << "#{key}: #{value}" }
       request_output << ""
       request_output << response.body if @print_body and response['content-type'] and response['content-type'].include? 'application/json'
@@ -301,10 +303,16 @@ module ApiTestHelper
     end
 
     # return value from *job_name* for *var*
-    def response job_name, var
-      if not @group[job_name].nil? and not @group[job_name].request_response.nil? and not @group[job_name].request_response[var].nil?
-        @group[job_name].request_response[var]
-      elsif not @group[job_name].nil? and not @group[job_name].request_response.nil?
+    def response job_name, var, group: nil
+      group = if group
+                @project[group]
+              else
+                @group
+              end
+
+      if not group[job_name].nil? and not group[job_name].request_response.nil? and not group[job_name].request_response[var].nil?
+        group[job_name].request_response[var]
+      elsif not group[job_name].nil? and not group[job_name].request_response.nil?
         error '[' + job_name + '] Variable ' + var + ' not found in job response'
         exit 1
       else

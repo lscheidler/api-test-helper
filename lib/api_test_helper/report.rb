@@ -24,15 +24,15 @@ module ApiTestHelper
       #OutputHelper::Columns::config(
       #  ascii: true
       #)
-      @data = OutputHelper::Columns.new ['project', 'group', 'job', 'runtime', 'passed', 'failed', 'warnings']
+      @data = OutputHelper::Columns.new ['project', 'group', 'job', 'runtime', 'status', 'passed', 'failed', 'warnings']
 
       @data.formatter :passed, Proc.new{|row, value| (value == 0) ? 0 : value.to_s.green}
       @data.formatter :failed, Proc.new{|row, value| (value == 0) ? value : value.to_s.red}
       @data.formatter :warnings, Proc.new{|row, value| (value == 0) ? value : value.to_s.yellow}
     end
 
-    def add project:, group:, job:, runtime:, passed:, failed:, warnings:
-      @data << ({project: project, group: group, job: job, runtime: runtime, passed: passed, failed: failed, warnings: warnings})
+    def add project:, group:, job:, runtime:, status:, passed:, failed:, warnings:
+      @data << ({project: project, group: group, job: job, runtime: runtime, status: status, passed: passed, failed: failed, warnings: warnings})
     end
 
     def to_s
@@ -44,9 +44,9 @@ module ApiTestHelper
 
     def to_csv
       delimiter = ','
-      result = [['project', 'group', 'job', 'runtime', 'passed', 'failed', 'warnings'].join(delimiter)]
+      result = [['project', 'group', 'job', 'runtime', 'status', 'passed', 'failed', 'warnings'].join(delimiter)]
       @data.each do |job|
-        result << [job[:project], job[:group], job[:job], job[:runtime], job[:passed], job[:failed], job[:warnings]].join(delimiter)
+        result << [job[:project], job[:group], job[:job], job[:runtime], job[:status], job[:passed], job[:failed], job[:warnings]].join(delimiter)
       end
       result.join("\n")
     end

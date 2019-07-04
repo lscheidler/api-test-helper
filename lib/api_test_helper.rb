@@ -90,8 +90,9 @@ module ApiTestHelper
           @cmd_line_arguments[:generate_report] = true
         end
 
-        opt.on('-g', '--group NAME', 'set group') do |group|
-          @cmd_line_arguments[:group] = group
+        opt.on('-g', '--group NAME[,NAME]', Array, 'set groups') do |groups|
+          @cmd_line_arguments[:groups] ||= []
+          @cmd_line_arguments[:groups] += groups
         end
 
         opt.on('-j', '--job JOB[,JOB,...]', Array, 'Limit action to JOB, which is a regexpression') do |jobs|
@@ -166,6 +167,9 @@ module ApiTestHelper
 
     Variables and Responses:
       response('<job_name>', '<name>')        - return value from the response of a job (see examples)
+      response('<job_name>',                  - return value from the response of a job in another group (must be run before)
+               '<name>',
+               group: '<group_name>')
       var('<name>',                           - return variable defined in Job in Vars section.
                     default: nil,               when default is set (not nil) and variable is undefined, return default
                     ignore_error: false)        when variable is undefined, do not throw an error
@@ -188,6 +192,9 @@ module ApiTestHelper
 
       # get value pdfToken from register response, where job name is defined as variable in cancel job
       response(var('CreateJob'), 'pdfToken')
+
+      # get value token from GenerateToken response in group auth
+      response('GenerateToken', 'token', group: 'auth')
 
       # return time of today in seconds
       time()
@@ -265,8 +272,8 @@ module ApiTestHelper
       @projects.each do |pname, project|
         next if @config.project and @config.project != pname
 
-        project.groups.each do |gname, group|
-          next if @config.group and @config.group != gname
+        project.groups.sort.each do |gname, group|
+          next if @config.groups and not @config.groups.include? gname
 
           group.each do |job_name, job|
             next unless @selected_jobs.empty? or @selected_jobs.find{|x| job_name =~ /^#{x}$/}

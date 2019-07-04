@@ -74,6 +74,12 @@ module ApiTestHelper
       result.reduce{|a,b| a and b}
     end
 
+    def each
+      @group.each do |group_name, group|
+        yield group_name, group
+      end
+    end
+
     def [] name
       @groups[name]
     end

@@ -1,3 +1,9 @@
+0.1.5 (2019-07-04)
+==================
+
+- extended response() to get access to jobs in other groups in same project
+- added response code to report
+
 0.1.4 (2019-07-03)
 ==================
 
