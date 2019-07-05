@@ -1,0 +1,7 @@
+Name: jsonplaceholder.typicode.com
+Domain: https://jsonplaceholder.typicode.com
+
+testing:
+  Domain: https://jsonplaceholder.typicode.com
+production:
+  Domain: https://jsonplaceholder.typicode.com

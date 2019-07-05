@@ -1,0 +1,29 @@
+Name: albums
+Jobs:
+  Get:
+    Endpoint: /albums/1
+    Method: GET
+    Save_Body: false
+    Tests:
+      - Name: should user id 1
+        Key: userId
+        Value: 1
+        Type: Equal
+  Post:
+    Endpoint: /albums
+    Template: Post.erb
+    Vars:
+      userId: 101
+    Tests:
+      - Name: should return album title
+        Key: title
+        Value: my first album
+        Type: Equal
+      - Name: should return id
+        Key: id
+        Value: ^[0-9]*$
+        Type: Regexp
+      - Name: should return userId
+        Key: userId
+        Value: 101
+        Type: Equal

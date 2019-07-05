@@ -1,0 +1,20 @@
+Name: users-albums
+Jobs:
+  Post:
+    Endpoint: /albums
+    Template: Post.erb
+    Vars:
+      userId: "<%= response('Post', 'id', group: 'users') %>"
+    Tests:
+      - Name: should return album title
+        Key: title
+        Value: my first album
+        Type: Equal
+      - Name: should return id
+        Key: id
+        Value: ^[0-9]*$
+        Type: Regexp
+      - Name: should return userId
+        Key: userId
+        Value: 101
+        Type: Equal

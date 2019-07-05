@@ -1,0 +1,30 @@
+Name: users
+Jobs:
+  Post:
+    Endpoint: /users
+    Template: Post.erb
+    Authorization: "<%= basicauth('USERS_admin_username', 'USERS_admin_password') %>"
+
+    # add additional headers:
+    Headers:
+      TEST: test
+
+    # wait number of seconds, before sending request:
+    Wait: 1
+
+    # don't parse body as json, when true:
+    Ignore_Body: false
+
+    # don't print body in output, when false:
+    Print_Body: true
+
+    # save body (e.g. pdf) in output directory, when true:
+    Save_Body: false
+
+    #Download_Directory: <directory> # defaults to output directory
+
+    Vars:
+      name: Max Mustermann
+      username: mmusermann
+      email: max@mustermann.biz
+      password_expiration: "<%= time(356, format: :iso8601) %>"
