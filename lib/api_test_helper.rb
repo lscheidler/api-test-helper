@@ -180,8 +180,9 @@ module ApiTestHelper
       time([<day_shift>[, format: <format>]]) - returns time in specificied format
                                                 defaults: day_shift = 0, format = :seconds
                                                 format:
-                                                  :seconds : return time in seconds
-                                                  :iso8601 : return timestamp in iso8601
+                                                  :seconds    : return time in seconds
+                                                  :iso8601    : return timestamp in iso8601
+                                                  :iso8601utc : return timestamp in iso8601 (utc)
 
     Examples:
       # get variable test

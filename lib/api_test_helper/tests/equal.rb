@@ -43,6 +43,8 @@ module ApiTestHelper
           @failed = true
         end
         success?
+      rescue TypeError
+        @failed = true
       end
 
       def success?

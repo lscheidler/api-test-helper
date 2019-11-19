@@ -17,6 +17,8 @@ require 'benchmark'
 require 'erb'
 require 'json'
 require 'net/http'
+require 'net/http/post/multipart'
+require 'mime/types'
 
 require "output_helper"
 
@@ -43,9 +45,12 @@ module ApiTestHelper
       @failed_tests       = 0
       @warnings           = 0
 
+      @body               = get_setting cfg, 'Body', required: false
+      @content_type       = get_setting cfg, 'ContentType', required: false, default: 'application/json'
       @request_method     = get_setting cfg, 'Method', required: false, default: 'Post'
       if @request_method != 'GET'
         @template         = get_setting cfg, 'Template', required: false
+        @file             = get_setting cfg, 'File', required: false
       end
       @endpoint           = get_setting cfg, 'Endpoint'
       @authorization      = get_setting cfg, 'Authorization', required: false
@@ -128,11 +133,23 @@ module ApiTestHelper
 
                      request = Net::HTTP::Get.new(@uri, @headers)
                    else
-                     @headers['content_type'] = 'application/json'
+                     @headers['content_type'] = @content_type
 
-                     request = Kernel.const_get('Net::HTTP::' + @request_method.capitalize).new(@uri, @headers)
-                     request.body = get_json_doc if @template
-                     request.content_type = 'application/json'
+                     request = case @content_type
+                               when 'multipart/form-data'
+                                 params = {}
+                                 params.merge!(@body) if @body
+                                 params['file'] = UploadIO.new(get_file, MIME::Types.type_for(get_file).first.content_type, "blob") if @file
+
+                                 Kernel.const_get('Net::HTTP::' + @request_method.capitalize + '::Multipart').new(@uri, params, @headers)
+                               else
+                                 request = Kernel.const_get('Net::HTTP::' + @request_method.capitalize).new(@uri, @headers)
+                                 request.content_type = @content_type
+                                 if @template
+                                   request.body = get_json_doc
+                                 end
+                                 request
+                               end
 
                      exit 1 if request.body.nil? and not @template.nil?
 
@@ -179,10 +196,20 @@ module ApiTestHelper
 
     def get_template
       arr = [
-        [@project.dir, @group.dir, 'templates', @template].join('/'),
-        [@group.dir, 'templates', @template].join('/'),
-        [@project.dir, 'templates', @template].join('/'),
-        ['templates', @template].join('/')
+        File.join(["#{@project.dir}", "#{@group.dir}", 'templates', "#{@template}"]),
+        File.join(["#{@group.dir}", 'templates', "#{@template}"]),
+        File.join(["#{@project.dir}", 'templates', "#{@template}"]),
+        File.join(['templates', "#{@template}"])
+      ]
+      arr.find{|x| File.exist? x}
+    end
+
+    def get_file
+      arr = [
+        File.join(["#{@project.dir}", "#{@group.dir}", 'files', "#{@file}"]),
+        File.join(["#{@group.dir}", 'files', "#{@file}"]),
+        File.join(["#{@project.dir}", 'files', "#{@file}"]),
+        File.join(['files', "#{@file}"])
       ]
       arr.find{|x| File.exist? x}
     end
@@ -333,8 +360,10 @@ module ApiTestHelper
         time.to_i
       when :iso8601
         time.strftime('%FT%T%:z')
+      when :iso8601utc
+        time.utc.strftime("%FT%T.%3NZ")
       else
-        error 'Format ' + format.to_s + ' is unknown for time(). Available formats: :seconds, :iso8601.'
+        error 'Format ' + format.to_s + ' is unknown for time(). Available formats: :seconds, :iso8601, :iso8601utc.'
         exit 1
       end
     end

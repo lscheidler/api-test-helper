@@ -1,3 +1,9 @@
+0.2.0 (2019-11-19)
+==================
+
+- added support for multipart/form-data and file upload
+- added new time format :iso8601utc
+
 0.1.5 (2019-07-04)
 ==================
 

@@ -28,3 +28,18 @@ Jobs:
       username: mmusermann
       email: max@mustermann.biz
       password_expiration: "<%= time(356, format: :iso8601) %>"
+  Put:
+    Endpoint: /users
+    Authorization: "<%= basicauth('USERS_admin_username', 'USERS_admin_password') %>"
+    ContentType: "multipart/form-data"
+    Method: PUT
+
+    # add additional headers:
+    Headers:
+      TEST: test
+
+    Body:
+      name: Max Mustermann
+      username: mmusermann
+      email: max@mustermann.biz
+      password_expiration: "<%= time(356, format: :iso8601) %>"

@@ -37,6 +37,8 @@ module ApiTestHelper
 
         @failed = value.empty?
         success?
+      rescue TypeError
+        @failed = true
       end
 
       def success?
