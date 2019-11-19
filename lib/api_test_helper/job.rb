@@ -138,7 +138,10 @@ module ApiTestHelper
                      request = case @content_type
                                when 'multipart/form-data'
                                  params = {}
-                                 params.merge!(@body) if @body
+                                 if @body
+                                   body_json = ERB.new(JSON::dump(@body)).result(binding)
+                                   params.merge!(JSON::parse(body_json))
+                                 end
                                  params['file'] = UploadIO.new(get_file, MIME::Types.type_for(get_file).first.content_type, "blob") if @file
 
                                  Kernel.const_get('Net::HTTP::' + @request_method.capitalize + '::Multipart').new(@uri, params, @headers)
