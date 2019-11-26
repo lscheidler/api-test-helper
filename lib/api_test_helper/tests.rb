@@ -15,3 +15,4 @@
 require "api_test_helper/tests/equal"
 require "api_test_helper/tests/not_empty"
 require "api_test_helper/tests/regexp"
+require "api_test_helper/tests/status_code"

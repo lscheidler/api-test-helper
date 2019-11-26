@@ -27,3 +27,6 @@ Jobs:
         Key: userId
         Value: 101
         Type: Equal
+      - Name: check status code
+        Type: StatusCode
+        Value: 201

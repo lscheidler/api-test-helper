@@ -30,7 +30,7 @@ module ApiTestHelper
   class Job
     include OutputHelper
 
-    attr_reader :name, :uri, :request_response, :runtime
+    attr_reader :name, :uri, :response, :request_response, :request_response_code, :runtime
     attr_reader :print_body, :ignore_body, :save_body, :download_directory
 
     def initialize name, cfg, config:, project:, group:
@@ -93,7 +93,7 @@ module ApiTestHelper
           next
         end
 
-        test.test @request_response, job_binding: binding
+        test.test @request_response, job: self, job_binding: binding
         if not test.success?
           @failed_tests += 1
           error test.name + ' failed'
@@ -250,22 +250,22 @@ module ApiTestHelper
       http.use_ssl = @uri.scheme == 'https'
       @config.debug and http.set_debug_output $stderr
 
-      response = http.start do
+      @response = http.start do
         http.request(get_request)
       end
 
-      @request_response_code = response.code
-      request_output = ['HTTP/' + response.http_version + ' ' + response_color(@request_response_code)]
-      response.header.each_header {|key,value| request_output << "#{key}: #{value}" }
+      @request_response_code = @response.code
+      request_output = ['HTTP/' + @response.http_version + ' ' + response_color(@request_response_code)]
+      @response.header.each_header {|key,value| request_output << "#{key}: #{value}" }
       request_output << ""
-      request_output << response.body if @print_body and response['content-type'] and response['content-type'].include? 'application/json'
+      request_output << @response.body if @print_body and @response['content-type'] and @response['content-type'].include? 'application/json'
 
       puts request_output.join("\n") unless @config.quiet
       @request_output_io and @request_output_io.puts request_output.join("\n")
 
       # assuming, api returns a json string
       begin
-        @request_response = JSON::parse(response.body) if not @ignore_body and response['content-type'] and response['content-type'].include? 'application/json'
+        @request_response = JSON::parse(@response.body) if not @ignore_body and @response['content-type'] and @response['content-type'].include? 'application/json'
       rescue JSON::ParserError => exception
         error '  WARNING: Parsing body as json failed with: ' + exception.class.to_s + ' - ' + exception.message
       end
@@ -275,7 +275,7 @@ module ApiTestHelper
         Dir.mkdir @download_directory if not File.directory? @download_directory
 
         extension = '.txt'
-        case response['content-type']
+        case @response['content-type']
         when /json/
           extension = '.json'
         when /pdf/
@@ -284,7 +284,7 @@ module ApiTestHelper
 
         filename = File.join(@download_directory, [@project.name, @group.name, @name].join('-') + extension)
         File.open(filename, 'w') do |io|
-          io.print response.body
+          io.print @response.body
         end
 
         unless @config.quiet

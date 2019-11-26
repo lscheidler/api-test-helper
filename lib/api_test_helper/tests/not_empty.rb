@@ -32,7 +32,7 @@ module ApiTestHelper
         @failed = false
       end
 
-      def test response, job_binding: nil
+      def test response, job: nil, job_binding: nil
         value = get_value response, @key
 
         @failed = value.empty?
