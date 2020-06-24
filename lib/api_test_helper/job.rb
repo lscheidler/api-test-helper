@@ -1,4 +1,4 @@
-# Copyright 2018 Lars Eric Scheidler
+# Copyright 2020 Lars Eric Scheidler
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -87,7 +87,7 @@ module ApiTestHelper
       end
 
       @tests.each do |test|
-        if @request_response.nil?
+        if @request_response.nil? and test.requires_json
           error '  WARNING: No json response available to test against'
           @failed_tests += 1
           next
