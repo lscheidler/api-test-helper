@@ -310,7 +310,7 @@ module ApiTestHelper
     #
     def basicauth username_key, password_key
       if @config.has_key? username_key and @config.has_key? password_key
-        'Basic ' + Base64.encode64(@config[username_key] + ':' + @config[password_key])
+        'Basic ' + Base64.strict_encode64(@config[username_key] + ':' + @config[password_key])
       else
         error 'Cannot create basic auth header, because either ' + username_key + ' or ' + password_key + ' is missing'
         exit 1

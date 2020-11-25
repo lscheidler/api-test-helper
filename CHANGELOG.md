@@ -1,3 +1,8 @@
+0.2.4 (2020-11-25)
+==================
+
+- use `Base64.strict_encode64` instead of `Base64.encode64` to circumvent problems line feeds
+
 0.2.3 (2020-06-24)
 ==================
 
